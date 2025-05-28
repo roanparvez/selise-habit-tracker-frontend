@@ -5,14 +5,8 @@ import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [
-    CommonModule,
-    OverviewCardComponent,
-    HabitSummaryComponent,
-  ],
+  imports: [CommonModule, OverviewCardComponent, HabitSummaryComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })
-export class DashboardComponent {
- 
-}
+export class DashboardComponent {}

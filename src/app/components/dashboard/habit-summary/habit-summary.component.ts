@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { first, Observable } from 'rxjs';
 import { Habit, HabitService } from '../../../services/habit.service';
 import { AddHabitButtonComponent } from '../add-habit-button/add-habit-button.component';
 import { CreateHabitComponent } from '../create-habit/create-habit.component';
@@ -19,6 +19,17 @@ import { CreateHabitComponent } from '../create-habit/create-habit.component';
 })
 export class HabitSummaryComponent implements OnInit {
   isModalOpen = false;
+  habits$: Observable<Habit[]>;
+  selectedHabitForUpdate: Habit | null = null;
+  selectedHabitForDelete: Habit | null = null;
+
+  constructor(private habitService: HabitService) {
+    this.habits$ = this.habitService.getHabits();
+  }
+
+  ngOnInit(): void {
+    this.habitService.fetchHabits().pipe(first()).subscribe();
+  }
 
   openModal() {
     this.isModalOpen = true;
@@ -32,23 +43,41 @@ export class HabitSummaryComponent implements OnInit {
     this.closeModal();
   }
 
-  habits$: Observable<Habit[]>;
+  isCompleted(habit: Habit): boolean {
+    const now = new Date();
 
-  selectedHabitForUpdate: Habit | null = null;
-  selectedHabitForDelete: Habit | null = null;
+    return habit.completedDates.some((dateStr) => {
+      const date = new Date(dateStr);
 
-  constructor(private habitService: HabitService) {
-    this.habits$ = this.habitService.getHabits();
+      switch (habit.frequency) {
+        case 'daily':
+          return date.toDateString() === now.toDateString();
+        case 'weekly':
+          const currentWeek = this.getWeekNumber(now);
+          const habitWeek = this.getWeekNumber(date);
+          return (
+            currentWeek === habitWeek &&
+            date.getFullYear() === now.getFullYear()
+          );
+        case 'monthly':
+          return (
+            date.getFullYear() === now.getFullYear() &&
+            date.getMonth() === now.getMonth()
+          );
+        default:
+          return false;
+      }
+    });
   }
 
-  ngOnInit(): void {
-    this.habitService.fetchHabits().subscribe();
-  }
-
-  isCompletedToday(habit: Habit): boolean {
-    const today = new Date().toDateString();
-    return habit.completedDates.some(
-      (date) => new Date(date).toDateString() === today
+  getWeekNumber(date: Date): number {
+    const oneJan = new Date(date.getFullYear(), 0, 1);
+    const millisecsInDay = 86400000;
+    return Math.ceil(
+      ((date.getTime() - oneJan.getTime()) / millisecsInDay +
+        oneJan.getDay() +
+        1) /
+        7
     );
   }
 
@@ -58,9 +87,8 @@ export class HabitSummaryComponent implements OnInit {
     });
   }
 
-  // Open update modal
   onUpdateHabit(habit: Habit) {
-    this.selectedHabitForUpdate = { ...habit }; // Clone to avoid immediate mutation
+    this.selectedHabitForUpdate = { ...habit };
   }
 
   closeUpdateModal() {
@@ -74,6 +102,7 @@ export class HabitSummaryComponent implements OnInit {
       .updateHabit(this.selectedHabitForUpdate._id, {
         title: this.selectedHabitForUpdate.title,
         description: this.selectedHabitForUpdate.description,
+        frequency: this.selectedHabitForUpdate.frequency,
       })
       .subscribe(() => {
         this.habitService.fetchHabits().subscribe();
@@ -81,7 +110,6 @@ export class HabitSummaryComponent implements OnInit {
       });
   }
 
-  // Open delete modal
   onDeleteHabit(habit: Habit) {
     this.selectedHabitForDelete = habit;
   }

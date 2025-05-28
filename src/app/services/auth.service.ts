@@ -8,7 +8,6 @@ import { BehaviorSubject, tap } from 'rxjs';
   providedIn: 'root',
 })
 export class AuthService {
-  // Reactive state for authentication status
   isAuthenticated$ = new BehaviorSubject<boolean | null>(null);
 
   constructor(private http: HttpClient, private router: Router) {}
@@ -24,11 +23,7 @@ export class AuthService {
       .post(`${environment.apiUrl}/auth/login`, body, {
         withCredentials: true,
       })
-      .pipe(
-        tap(() => {
-          this.isAuthenticated$.next(true);
-        })
-      );
+      .pipe(tap(() => this.isAuthenticated$.next(true)));
   }
 
   logout() {
@@ -50,15 +45,13 @@ export class AuthService {
       })
       .pipe(
         tap(
-          (res) => {
-            this.isAuthenticated$.next(res.isAuthenticated);
-          },
-          (error) => {
-            this.isAuthenticated$.next(false);
-          }
+          (res) => this.isAuthenticated$.next(res.isAuthenticated),
+          () => this.isAuthenticated$.next(false)
         )
       );
   }
 
-  isAuthenticated() {}
+  isAuthenticated() {
+    return this.isAuthenticated$.asObservable();
+  }
 }

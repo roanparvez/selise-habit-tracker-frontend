@@ -1,95 +1,50 @@
-<div class="bg-white rounded-2xl shadow-lg p-6">
-  <div
-    class="flex flex-col sm:flex-row items-center justify-between gap-8 mb-16"
-  >
-    <h3 class="text-2xl font-bold text-gray-800 order-2 sm:order-1">
-      Your Habits
-    </h3>
-    <div class="flex items-center gap-4 order-1 sm:order-2">
-      <app-add-habit-button (click)="openModal()"></app-add-habit-button>
-
-      <!-- Modal -->
-      <ng-container *ngIf="isModalOpen">
-        <div
-          class="fixed inset-0 bg-blue-50 bg-opacity-50 flex items-center justify-center z-50"
-        >
-          <div
-            class="bg-white rounded-xl p-6 shadow-lg relative max-w-md w-full"
-          >
-            <button
-              class="absolute top-2 right-3 text-gray-500 hover:text-black text-xl"
-              (click)="closeModal()"
-            >
-              &times;
-            </button>
-
-            <app-create-habit
-              (habitCreated)="onHabitCreated()"
-              (cancel)="closeModal()"
-            ></app-create-habit>
-          </div>
-        </div>
-      </ng-container>
-    </div>
+<div class="container mx-auto px-4 py-6">
+  <!-- Header Section -->
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Habit Summary</h1>
+    <app-add-habit-button (click)="openModal()" />
   </div>
 
-  <ng-container *ngIf="habits$ | async as habits; else loading">
-    <div
-      *ngIf="habits.length > 0; else noHabits"
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-    >
+  <!-- Habit Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+    <ng-container *ngIf="habits$ | async as habits">
       <div
         *ngFor="let habit of habits"
-        class="flex flex-col justify-between rounded-xl border border-gray-200 shadow-sm p-6 bg-white hover:shadow-lg transition-shadow duration-300 min-h-[320px]"
+        class="p-4 rounded-lg border shadow-sm bg-white space-y-4"
       >
-        <!-- Title & Description -->
-        <div class="mb-4">
-          <h4 class="text-xl font-semibold text-gray-900 truncate">
-            {{ habit.title }}
-          </h4>
-          <p class="text-sm text-gray-500 mt-1 line-clamp-3">
-            {{ habit.description || "No description" }}
-          </p>
-        </div>
+        <!-- Habit Info -->
+        <div>
+          <h2 class="text-xl font-semibold text-gray-800">{{ habit.title }}</h2>
+          <p class="text-sm text-gray-600">{{ habit.description }}</p>
 
-        <!-- Streak Info -->
-        <div class="mb-6 space-y-1 text-sm">
-          <p class="flex items-center gap-1 text-orange-600 font-medium">
-            🔥 Current Streak:
-            <span class="text-gray-800 font-semibold">
-              {{ habit.currentStreak }} day{{
-                habit.currentStreak !== 1 ? "s" : ""
-              }}
-            </span>
-          </p>
-          <p class="flex items-center gap-1 text-indigo-600 font-medium">
-            🏆 Longest Streak:
-            <span class="text-gray-800 font-semibold">
-              {{ habit.longestStreak }} day{{
-                habit.longestStreak !== 1 ? "s" : ""
-              }}
-            </span>
-          </p>
+          <div class="mt-2 text-xs text-gray-500 space-y-1">
+            <p>
+              📅 Frequency:
+              <span class="italic">{{ habit.frequency | titlecase }}</span>
+            </p>
+            <p>
+              🔥 Current Streak: <strong>{{ habit.currentStreak }}</strong>
+            </p>
+            <p>
+              🏆 Longest Streak: <strong>{{ habit.longestStreak }}</strong>
+            </p>
+          </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="mt-6 flex flex-col gap-3">
-          <!-- Mark Completed button full width -->
+        <div class="mt-4 flex flex-col gap-3">
           <button
-            [disabled]="isCompletedToday(habit)"
-            (click)="!isCompletedToday(habit) && markCompleted(habit._id)"
+            [disabled]="isCompleted(habit)"
+            (click)="!isCompleted(habit) && markCompleted(habit._id)"
             [ngClass]="{
-              'bg-green-600 hover:bg-green-700 text-white':
-                !isCompletedToday(habit),
-              'bg-gray-200 text-gray-500 cursor-not-allowed':
-                isCompletedToday(habit)
+              'bg-green-600 hover:bg-green-700 text-white': !isCompleted(habit),
+              'bg-gray-200 text-gray-500 cursor-not-allowed': isCompleted(habit)
             }"
             class="w-full px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 shadow-sm"
           >
-            {{ isCompletedToday(habit) ? "✔️ Completed" : "Mark as Completed" }}
+            {{ isCompleted(habit) ? "✔️ Completed" : "Mark as Completed" }}
           </button>
 
-          <!-- Update and Delete buttons side-by-side -->
           <div class="flex gap-3 justify-start flex-wrap">
             <button
               (click)="onUpdateHabit(habit)"
@@ -107,83 +62,90 @@
           </div>
         </div>
       </div>
-    </div>
-  </ng-container>
+    </ng-container>
+  </div>
 
-  <!-- No habits fallback -->
-  <ng-template #noHabits>
-    <p class="text-gray-500 text-center text-base">No habits found.</p>
-  </ng-template>
+  <!-- Create Habit Modal -->
+  <app-create-habit
+    *ngIf="isModalOpen"
+    (habitCreated)="onHabitCreated()"
+    (close)="closeModal()"
+  />
 
-  <!-- Loading fallback -->
-  <ng-template #loading>
-    <p class="text-gray-400 text-center text-base">Loading habits...</p>
-  </ng-template>
-</div>
+  <!-- Update Habit Modal -->
+  <div
+    *ngIf="selectedHabitForUpdate"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+  >
+    <div class="bg-white p-6 rounded-lg w-full max-w-md space-y-4">
+      <h2 class="text-xl font-semibold mb-4">Update Habit</h2>
 
-<!-- Update Habit Modal -->
-<div
-  *ngIf="selectedHabitForUpdate"
-  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
->
-  <div class="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-    <h3 class="text-xl font-bold mb-4">Update Habit</h3>
+      <label class="block mb-2 font-semibold">Title</label>
+      <input
+        [(ngModel)]="selectedHabitForUpdate.title"
+        class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+      />
 
-    <label class="block mb-2 font-semibold">Title</label>
-    <input
-      type="text"
-      [(ngModel)]="selectedHabitForUpdate.title"
-      class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-    />
+      <label class="block mb-2 font-semibold">Description</label>
+      <textarea
+        [(ngModel)]="selectedHabitForUpdate.description"
+        class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+      ></textarea>
 
-    <label class="block mb-2 font-semibold">Description</label>
-    <textarea
-      [(ngModel)]="selectedHabitForUpdate.description"
-      class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-    ></textarea>
-
-    <div class="flex justify-end gap-2">
-      <button
-        (click)="closeUpdateModal()"
-        class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-700"
+      <label class="block mb-2 font-semibold">Frequency</label>
+      <select
+        [(ngModel)]="selectedHabitForUpdate.frequency"
+        class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
       >
-        Cancel
-      </button>
-      <button
-        (click)="submitUpdate()"
-        class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-      >
-        Save
-      </button>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+
+      <div class="flex justify-end space-x-4">
+        <button
+          (click)="closeUpdateModal()"
+          class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="submitUpdate()"
+          class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+        >
+          Save
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<div
-  *ngIf="selectedHabitForDelete"
-  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
->
-  <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg text-center">
-    <h3 class="text-xl font-bold mb-4">Delete Habit</h3>
-    <p class="mb-6">
-      Are you sure you want to delete
-      <strong>{{ selectedHabitForDelete.title }}</strong
-      >?
-    </p>
-    <div class="flex justify-center gap-4">
-      <button
-        (click)="closeDeleteModal()"
-        class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-700"
-      >
-        Cancel
-      </button>
-      <button
-        (click)="confirmDelete()"
-        class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-      >
-        Delete
-      </button>
+  <!-- Delete Confirmation Modal -->
+  <div
+    *ngIf="selectedHabitForDelete"
+    class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+  >
+    <div class="bg-white p-6 rounded-lg w-full max-w-sm space-y-4 text-center">
+      <h2 class="text-lg font-semibold">Are you sure?</h2>
+      <p class="text-sm text-gray-600">
+        Do you really want to delete the habit
+        <strong>{{ selectedHabitForDelete.title }}</strong
+        >?
+      </p>
+
+      <div class="flex justify-center space-x-4 mt-4">
+        <button
+          (click)="closeDeleteModal()"
+          class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-sm font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="confirmDelete()"
+          class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium"
+        >
+          Delete
+        </button>
+      </div>
     </div>
   </div>
 </div>
